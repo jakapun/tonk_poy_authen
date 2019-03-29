@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' show get;
+import 'dart:convert';
 
 class Register extends StatefulWidget {
   @override
@@ -63,13 +65,22 @@ class _RegisterState extends State<Register> {
     );
   }
 
-  void clickCloudUpload() {
+  void clickCloudUpload(BuildContext context) async {
     print('click upload');
     print(formKey.currentState.validate());
     if (formKey.currentState.validate()) {
       formKey.currentState.save();
       print(
           'name => $nameString, email => $emailString, password => $passwordString');
+          String urlString = 'https://androidthai.in.th/poy/addDataPoy.php?isAdd=true&Name=$nameString&Email=$emailString&Password=$passwordString';
+
+          var response =await get(urlString); 
+          var result = json.decode(response.body);
+          print(result);
+
+          if (result.toString() == 'true') {
+            Navigator.pop(context);
+          }
     }
   }
 
@@ -84,7 +95,7 @@ class _RegisterState extends State<Register> {
               icon: Icon(Icons.cloud_upload),
               tooltip: 'Upload To Server', //press 3 second
               onPressed: () {
-                clickCloudUpload();
+                clickCloudUpload(context);
               },
             )
           ],
