@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'register.dart';
+import 'package:http/http.dart' show get; // call get method
+import 'dart:convert'; //change respond to ascii
+import '../models/user_model.dart'; //call user_model.dart -> model database
 
 class Home extends StatefulWidget {
   @override
@@ -7,6 +10,12 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  //explicit
+  String emailString, passwordString;
+
+  //key
+  final formKey = GlobalKey<FormState>();
+  final homeScaffoldKey = GlobalKey<ScaffoldState>(); //new draw in old draw
   //logo
 
   Widget showLogo() {
@@ -34,6 +43,14 @@ class _HomeState extends State<Home> {
           labelStyle: TextStyle(color: Colors.white),
           labelText: 'Email Address',
           hintText: 'you@email.com'),
+      validator: (String value) {
+        if (!value.contains('@')) {
+          return 'Please type email address';
+        }
+      },
+      onSaved: (String value) {
+        emailString = value;
+      },
     );
   }
 
@@ -41,22 +58,78 @@ class _HomeState extends State<Home> {
 
   Widget passwordTextfield() {
     return TextFormField(
-        decoration: InputDecoration(
-      labelText: 'Password:',
-      hintText: 'more 6 charactor',
-      labelStyle: TextStyle(color: Colors.white),
-    ));
+      obscureText: true,
+      decoration: InputDecoration(
+        labelText: 'Password:',
+        hintText: 'more 6 charactor',
+        labelStyle: TextStyle(color: Colors.white),
+      ),
+      validator: (String value) {
+        if (value.length <= 5) {
+          return 'password is short';
+        }
+      },
+      onSaved: (String value) {
+        passwordString = value;
+      },
+    );
   }
 
   //button signin
-  Widget signInButton() {
+  Widget signInButton(BuildContext context) {
     return RaisedButton(
       color: Colors.redAccent,
       child: Text('Sign In'),
       onPressed: () {
-        print('You Click SignIn');
+        //call void
+        checkEmailAndPassword(context);
       },
     );
+  }
+
+  void checkEmailAndPassword(BuildContext context) async {
+    print('You Click SignIn');
+
+    if (formKey.currentState.validate()) {
+      formKey.currentState.save();
+      print('email => $emailString, pass => $passwordString');
+
+      String urlString =
+          'https://www.androidthai.in.th/poy/getUserWhereEmailPoy.php?isAdd=true&Email=$emailString';
+
+      var response = await get(urlString);
+      var result = json.decode(response.body);
+
+      print('result => $result');
+
+      if (result.toString() == 'null') {
+        showSnakeBar('User Fault,Please try again'); //like torst in ionic
+      } else {
+
+        // have json
+        for (var data in result) {
+
+          var userModel =UserModel.formJson(data);
+          String truePass =userModel.password.toString();
+          String nameReadable =userModel.name.toString();
+
+          if (passwordString ==truePass) {
+            showSnakeBar('Welcome $nameReadable');
+          } else {
+            showSnakeBar('Password False');
+          }
+          
+        }
+        
+      }
+    }
+  }
+
+  void showSnakeBar(String messageString) {
+    final snackBar = new SnackBar(
+      content: Text(messageString),
+    );
+    homeScaffoldKey.currentState.showSnackBar(snackBar);
   }
 
   //button signup
@@ -78,44 +151,50 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        // body: Text('Home',style: TextStyle(fontSize: 50.0),),
-        body: Container(
-      decoration: BoxDecoration(
-          gradient: LinearGradient(
-              colors: [Colors.red, Colors.white], begin: Alignment(-1, -1))),
-      padding: EdgeInsets.only(top: 100.0),
-      alignment: Alignment.center,
-      child: Column(
-        children: <Widget>[
-          showLogo(),
-          Container(
-            //ครอบ container เพื่อจัด margin ของ text
-            margin: EdgeInsets.only(top: 20.0),
-            child: showText(),
-          ),
-          Container(
-            margin: EdgeInsets.only(left: 50.0, right: 50.0),
-            child: emailTextfield(),
-          ),
-          Container(
-            margin: EdgeInsets.only(left: 50.0, right: 50.0),
-            child: passwordTextfield(),
-          ),
-          Container(
-            margin: EdgeInsets.only(left: 50.0, right: 50.0),
-            child: Row(
+      key: homeScaffoldKey,
+      resizeToAvoidBottomPadding: false,
+      // body: Text('Home',style: TextStyle(fontSize: 50.0),),
+      body: Form(
+          key: formKey,
+          child: Container(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [Colors.red, Colors.white],
+                    begin: Alignment(-1, -1))),
+            padding: EdgeInsets.only(top: 100.0),
+            alignment: Alignment.center,
+            child: Column(
               children: <Widget>[
-                new Expanded(
-                  child: signInButton(),
+                showLogo(),
+                Container(
+                  //ครอบ container เพื่อจัด margin ของ text
+                  margin: EdgeInsets.only(top: 20.0),
+                  child: showText(),
                 ),
-                new Expanded(
-                  child: signUpButton(context), //goto line 63
+                Container(
+                  margin: EdgeInsets.only(left: 50.0, right: 50.0),
+                  child: emailTextfield(),
+                ),
+                Container(
+                  margin: EdgeInsets.only(left: 50.0, right: 50.0),
+                  child: passwordTextfield(),
+                ),
+                Container(
+                  margin: EdgeInsets.only(left: 50.0, right: 50.0),
+                  child: Row(
+                    children: <Widget>[
+                      new Expanded(
+                        child: signInButton(context),
+                      ),
+                      new Expanded(
+                        child: signUpButton(context), //goto line 63
+                      )
+                    ],
+                  ),
                 )
               ],
             ),
-          )
-        ],
-      ),
-    ));
+          )),
+    );
   }
 }
